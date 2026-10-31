@@ -85,13 +85,15 @@ resource "aws_security_group" "alb" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+
   egress {
-    description = "Outbound traffic"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    description     = "Only forward traffic to FastAPI tasks"
+    from_port       = var.container_port
+    to_port         = var.container_port
+    protocol        = "tcp"
+    security_groups = [aws_security_group.ecs.id]
   }
+
 
   lifecycle {
     create_before_destroy = true
@@ -130,7 +132,7 @@ resource "aws_security_group" "ecs" {
 
 resource "aws_ecr_repository" "api" {
   name                 = "${local.name}-api"
-  image_tag_mutability = "MUTABLE"
+  image_tag_mutability = "IMMUTABLE"
 
   image_scanning_configuration {
     scan_on_push = true
@@ -190,6 +192,9 @@ resource "aws_lb" "api" {
 
   subnets         = aws_subnet.public[*].id
   security_groups = [aws_security_group.alb.id]
+
+  drop_invalid_header_fields = true
+
 }
 
 resource "aws_lb_target_group" "api" {
