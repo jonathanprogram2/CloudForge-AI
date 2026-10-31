@@ -78,3 +78,7 @@ Results are not persisted yet. The baseline checks for expected phrases and is n
 ## Cost guardrail
 
 Phase 1 has no AWS charges. Future AWS phases require explicit provisioning and may incur charges; make budgets and teardown part of deployment. Never commit secrets or AWS credentials.
+
+## Phase 2 update
+
+See [PHASE2.md](PHASE2.md) for the local provider abstraction, optional Groq integration, and SQLite run history. No AWS credentials are needed.
