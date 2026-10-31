@@ -85,16 +85,6 @@ resource "aws_security_group" "alb" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-
-  egress {
-    description     = "Only forward traffic to FastAPI tasks"
-    from_port       = var.container_port
-    to_port         = var.container_port
-    protocol        = "tcp"
-    security_groups = [aws_security_group.ecs.id]
-  }
-
-
   lifecycle {
     create_before_destroy = true
   }
@@ -294,4 +284,18 @@ resource "aws_ecs_service" "api" {
     aws_lb_listener.http,
     aws_iam_role_policy_attachment.execution
   ]
+
 }
+
+
+# ALB outbound rule — restricted to ECS tasks
+resource "aws_vpc_security_group_egress_rule" "alb_to_ecs" {
+  security_group_id            = aws_security_group.alb.id
+  referenced_security_group_id = aws_security_group.ecs.id
+
+  description = "Allow ALB to reach FastAPI containers"
+  ip_protocol = "tcp"
+  from_port   = var.container_port
+  to_port     = var.container_port
+}
+
