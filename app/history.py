@@ -1,4 +1,3 @@
-"""SQLite persistence (local-first; production will use managed AWS storage)."""
 import json
 import os
 import sqlite3

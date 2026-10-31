@@ -1,4 +1,3 @@
-"""Swappable LLM providers: deterministic local mock and optional Groq API."""
 import json
 import os
 from dataclasses import dataclass
