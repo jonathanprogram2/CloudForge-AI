@@ -8,7 +8,19 @@ from app.llm import ProviderError, get_provider
 from app.history import save_run, list_runs
 from pydantic import BaseModel, Field
 
+from fastapi.middleware.cors import CORSMiddleware
+
+
 app = FastAPI(title="CloudForge AI", version="0.1.0", description="Cloud-native AI evaluation and deployment platform")
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
+)
 
 
 class EvaluationStatus(str, Enum):
@@ -105,3 +117,148 @@ def generate_and_evaluate(request: GenerateEvaluationRequest) -> GenerationEvalu
 @app.get("/api/v1/runs", response_model=list[GenerationEvaluationResult])
 def history(limit: int = Query(default=20, ge=1, le=100)) -> list[dict]:
     return list_runs(limit)
+
+
+# Phase 3: AI benchmarking and metrics
+
+class BenchmarkCase(BaseModel):
+    prompt: str = Field(min_length=1, max_length=5000)
+    expected_terms: list[str] = Field(default_factory=list, max_length=50)
+
+
+class BenchmarkRequest(BaseModel):
+    provider: Literal["mock", "groq"] = "mock"
+    models: list[str] = Field(min_length=1, max_length=3)
+    cases: list[BenchmarkCase] = Field(min_length=1, max_length=4)
+
+
+@app.post("/api/v1/benchmarks")
+def benchmark(request: BenchmarkRequest) -> dict:
+    """Compare models across a bounded set of test cases."""
+
+    if len(set(request.models)) != len(request.models):
+        raise HTTPException(
+            status_code=422,
+            detail="Models must be unique"
+        )
+
+    results = []
+    errors = []
+
+    for model in request.models:
+        if not model.strip():
+            raise HTTPException(
+                status_code=422,
+                detail="Model names cannot be blank"
+            )
+
+        for case_index, case in enumerate(request.cases):
+            try:
+                result = generate_and_evaluate(
+                    GenerateEvaluationRequest(
+                        provider=request.provider,
+                        model_name=model,
+                        prompt=case.prompt,
+                        expected_terms=case.expected_terms,
+                    )
+                )
+
+                results.append({
+                    "case_index": case_index,
+                    **result.model_dump(mode="json")
+                })
+
+            except HTTPException as exc:
+                errors.append({
+                    "model": model,
+                    "case_index": case_index,
+                    "error": str(exc.detail)
+                })
+
+    summary = []
+
+    for model in request.models:
+        successful = [
+            r for r in results
+            if r["model_name"] == model
+        ]
+
+        summary.append({
+            "model": model,
+            "completed": len(successful),
+            "failed_requests": sum(
+                e["model"] == model for e in errors
+            ),
+            "average_score": (
+                round(
+                    sum(r["score"] for r in successful)
+                    / len(successful), 4
+                ) if successful else None
+            ),
+            "average_latency_ms": (
+                round(
+                    sum(r["latency_ms"] for r in successful)
+                    / len(successful), 2
+                ) if successful else None
+            ),
+            "input_tokens": sum(
+                r["input_tokens"] for r in successful
+                if r["input_tokens"] is not None
+            ),
+            "output_tokens": sum(
+                r["output_tokens"] for r in successful
+                if r["output_tokens"] is not None
+            ),
+        })
+
+    return {
+        "summary": summary,
+        "results": results,
+        "errors": errors,
+        "note": (
+            "Score measures keyword coverage, "
+            "not semantic correctness."
+        )
+    }
+
+
+@app.get("/api/v1/metrics")
+def metrics(
+    limit: int = Query(default=100, ge=1, le=100)
+) -> dict:
+    """Summarize recent locally stored evaluations."""
+
+    runs = list_runs(limit)
+
+    return {
+        "sample_size": len(runs),
+        "average_score": (
+            round(
+                sum(r["score"] for r in runs)
+                / len(runs), 4
+            ) if runs else None
+        ),
+        "pass_rate": (
+            round(
+                sum(r["status"] == "passed" for r in runs)
+                / len(runs), 4
+            ) if runs else None
+        ),
+        "average_latency_ms": (
+            round(
+                sum(r["latency_ms"] for r in runs)
+                / len(runs), 2
+            ) if runs else None
+        ),
+        "known_input_tokens": sum(
+            r.get("input_tokens") or 0 for r in runs
+        ),
+        "known_output_tokens": sum(
+            r.get("output_tokens") or 0 for r in runs
+        ),
+        "note": (
+            "Token totals exclude runs without "
+            "reported usage."
+        )
+    }
+
