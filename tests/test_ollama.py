@@ -26,6 +26,11 @@ class FakeResponse:
             },
             "prompt_eval_count": 18,
             "eval_count": 7,
+            
+            "eval_duration": 50000000,
+            "total_duration": 90000000,
+            "done_reason": "stop",
+
         }).encode("utf-8")
 
 
@@ -77,3 +82,16 @@ def test_ollama_api_integration(tmp_path, monkeypatch):
     history = client.get("/api/v1/runs").json()
     assert len(history) == 1
     assert history[0]["id"] == result["id"]
+
+
+def test_ollama_native_performance_fields():
+    with patch("app.llm.urlopen", return_value=FakeResponse()):
+        result = OllamaProvider().generate(
+            "Explain Docker Compose",
+            "qwen3:1.7b",
+        )
+
+    assert result.generation_duration_ns == 50000000
+    assert result.total_duration_ns == 90000000
+    assert result.done_reason == "stop"
+    assert result.output_tokens == 7

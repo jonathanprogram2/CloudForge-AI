@@ -15,6 +15,10 @@ class Generation:
     latency_ms: float
     input_tokens: int | None = None
     output_tokens: int | None = None
+    generation_duration_ns: int | None = None
+    total_duration_ns: int | None = None
+    done_reason: str | None = None
+
 
 
 class Provider(Protocol):
@@ -135,6 +139,11 @@ class OllamaProvider:
                 ),
                 input_tokens=data.get("prompt_eval_count"),
                 output_tokens=data.get("eval_count"),
+                
+                generation_duration_ns=data.get("eval_duration"),
+                total_duration_ns=data.get("total_duration"),
+                done_reason=data.get("done_reason"),
+
             )
 
         except (KeyError, TypeError, AttributeError) as exc:

@@ -121,6 +121,11 @@ class GenerationEvaluationResult(EvaluationResult):
     latency_ms: float
     input_tokens: int | None = None
     output_tokens: int | None = None
+    
+    generation_duration_ns: int | None = None
+    total_duration_ns: int | None = None
+    done_reason: str | None = None
+
 
 
 @app.post("/api/v1/runs", response_model=GenerationEvaluationResult)
@@ -143,6 +148,11 @@ def generate_and_evaluate(request: GenerateEvaluationRequest) -> GenerationEvalu
         latency_ms=generated.latency_ms,
         input_tokens=generated.input_tokens,
         output_tokens=generated.output_tokens,
+        
+        generation_duration_ns=generated.generation_duration_ns,
+        total_duration_ns=generated.total_duration_ns,
+        done_reason=generated.done_reason,
+
     )
     save_run(result.model_dump(mode="json"))
     

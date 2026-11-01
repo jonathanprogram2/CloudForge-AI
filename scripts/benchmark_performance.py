@@ -63,6 +63,10 @@ def request_model(api_url, model, prompt, timeout):
             "inference_latency_ms": result["latency_ms"],
             "input_tokens": result.get("input_tokens"),
             "output_tokens": result.get("output_tokens"),
+            
+            "generation_duration_ns": result.get("generation_duration_ns"),
+            "done_reason": result.get("done_reason"),
+
             "error": "",
         }
 
@@ -75,6 +79,10 @@ def request_model(api_url, model, prompt, timeout):
             "inference_latency_ms": None,
             "input_tokens": None,
             "output_tokens": None,
+            
+            "generation_duration_ns": None,
+            "done_reason": None,
+
             "error": str(exc),
         }
 
@@ -132,6 +140,25 @@ def run_benchmark(args):
         for r in successful
     )
 
+    
+    generation_ns = sum(
+        r["generation_duration_ns"] or 0
+        for r in successful
+    )
+
+    native_throughput = (
+        round(total_output / (generation_ns / 1e9), 2)
+        if generation_ns > 0
+        and all(r["generation_duration_ns"] for r in successful)
+        else None
+    )
+
+    truncated_count = sum(
+        r["done_reason"] == "length"
+        for r in successful
+    )
+
+
     report = {
         "model": args.model,
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -158,6 +185,10 @@ def run_benchmark(args):
             if inference_seconds > 0 else None
         ),
         "results": results,
+        
+        "native_generation_tokens_per_second": native_throughput,
+        "responses_stopped_at_length_limit": truncated_count,
+
     }
 
     output = Path(args.output)
@@ -178,6 +209,8 @@ def run_benchmark(args):
                 "run", "model", "prompt", "success",
                 "request_latency_ms", "inference_latency_ms",
                 "input_tokens", "output_tokens", "error",
+                "generation_duration_ns", "done_reason",
+
             ],
         )
         writer.writeheader()
