@@ -11,7 +11,24 @@ from pydantic import BaseModel, Field
 from fastapi.middleware.cors import CORSMiddleware
 
 
+
+from app.observability import (
+    monitor_requests,
+    prometheus_metrics,
+    record_ai_run,
+)
+
+
+
 app = FastAPI(title="CloudForge AI", version="0.1.0", description="Cloud-native AI evaluation and deployment platform")
+
+
+app.middleware("http")(monitor_requests)
+
+
+@app.get("/metrics", include_in_schema=False)
+def prometheus_endpoint():
+    return prometheus_metrics()
 
 
 app.add_middleware(
@@ -111,6 +128,18 @@ def generate_and_evaluate(request: GenerateEvaluationRequest) -> GenerationEvalu
         output_tokens=generated.output_tokens,
     )
     save_run(result.model_dump(mode="json"))
+    
+    record_ai_run(
+        provider=result.provider,
+        model=result.model_name,
+        status=result.status.value,
+        latency_ms=result.latency_ms,
+        input_tokens=result.input_tokens,
+        output_tokens=result.output_tokens,
+    )
+
+
+
     return result
 
 
