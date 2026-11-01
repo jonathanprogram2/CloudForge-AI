@@ -75,7 +75,7 @@ def evaluate(request: EvaluationRequest) -> EvaluationResult:
 
 
 class GenerateEvaluationRequest(BaseModel):
-    provider: Literal["mock", "groq"] = "mock"
+    provider: Literal["mock", "groq", "ollama"] = "mock"
     model_name: str = Field(default="demo-model", min_length=1, max_length=100)
     prompt: str = Field(min_length=1, max_length=5000)
     expected_terms: list[str] = Field(default_factory=list, max_length=50)
@@ -127,7 +127,7 @@ class BenchmarkCase(BaseModel):
 
 
 class BenchmarkRequest(BaseModel):
-    provider: Literal["mock", "groq"] = "mock"
+    provider: Literal["mock", "groq", "ollama"] = "mock"
     models: list[str] = Field(min_length=1, max_length=3)
     cases: list[BenchmarkCase] = Field(min_length=1, max_length=4)
 

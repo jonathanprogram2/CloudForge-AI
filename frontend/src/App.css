@@ -489,3 +489,18 @@ textarea:focus {
     grid-template-columns: 80px 1fr 60px;
   }
 }
+
+select {
+  width: 100%;
+  padding: 13px;
+  border-radius: 9px;
+  background: #0c1426;
+  color: white;
+  border: 1px solid #35425f;
+  font: inherit;
+  outline: none;
+}
+
+select:focus {
+  border-color: #8c8fff;
+}

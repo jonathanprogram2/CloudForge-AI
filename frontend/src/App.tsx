@@ -46,10 +46,12 @@ const percent = (value: number | null) =>
   value === null ? "—" : `${(value * 100).toFixed(1)}%`;
 
 function App() {
+  const [provider, setProvider] = useState<"mock" | "ollama">("ollama");
+
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [runs, setRuns] = useState<Run[]>([]);
   const [benchmark, setBenchmark] = useState<BenchmarkResponse | null>(null);
-  const [models, setModels] = useState("model-alpha, model-beta");
+  const [models, setModels] = useState("qwen3:1.7b");
   const [prompt, setPrompt] = useState("Explain AWS cloud computing");
   const [terms, setTerms] = useState("AWS, cloud");
   const [loading, setLoading] = useState(false);
@@ -147,7 +149,7 @@ function App() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          provider: "mock",
+          provider,
           models: modelList,
           cases: [{ prompt: prompt.trim(), expected_terms: termList }],
         }),
@@ -337,9 +339,28 @@ function App() {
               <div className="panel-heading">
                 <div>
                   <h2>Run a Benchmark</h2>
-                  <p>Compare simulated models locally</p>
+                  <p>Evaluate local or simulated AI models</p>
                 </div>
               </div>
+
+              <label htmlFor="provider">AI Provider</label>
+              <select
+                id="provider"
+                value={provider}
+                onChange={(e) => {
+                  const next = e.target.value as "mock" | "ollama";
+                  setProvider(next);
+                  setModels(
+                    next === "ollama"
+                      ? "qwen3:1.7b"
+                      : "model-alpha, model-beta",
+                  );
+                  setBenchmark(null);
+                }}
+              >
+                <option value="ollama">Ollama — Real Local AI</option>
+                <option value="mock">Mock — Simulated AI</option>
+              </select>
 
               <label>Model names (comma separated)</label>
               <input
@@ -365,7 +386,8 @@ function App() {
                 {loading ? "Running evaluation..." : "Run Benchmark →"}
               </button>
               <p className="hint">
-                Uses the mock provider. No API key or AWS billing required.
+                Ollama runs locally. Benchmark scores measure keyword coverage,
+                not overall model accuracy.
               </p>
             </div>
 

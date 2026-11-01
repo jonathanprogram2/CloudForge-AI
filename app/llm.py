@@ -70,9 +70,87 @@ class GroqProvider:
             raise ProviderError("Unexpected Groq API response structure") from exc
 
 
+
+class OllamaProvider:
+    def generate(self, prompt: str, model: str) -> Generation:
+        base_url = os.getenv(
+            "OLLAMA_BASE_URL",
+            "http://127.0.0.1:11434"
+        ).rstrip("/")
+
+        payload = json.dumps({
+            "model": model,
+            "messages": [
+                {"role": "user", "content": prompt}
+            ],
+            "stream": False,
+            "think": False,
+            "keep_alive": "2m",
+            "options": {
+                "temperature": 0,
+                "num_predict": 256,
+                "num_ctx": 2048,
+            }
+        }).encode("utf-8")
+
+        request = Request(
+            f"{base_url}/api/chat",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+
+        start = perf_counter()
+
+        try:
+            with urlopen(request, timeout=120) as response:
+                data = json.load(response)
+
+        except HTTPError as exc:
+            raise ProviderError(
+                f"Ollama returned HTTP {exc.code}. "
+                "Check that the model is installed."
+            ) from exc
+
+        except (URLError, TimeoutError, OSError, ValueError) as exc:
+            raise ProviderError(
+                "Cannot reach Ollama. Check that it is "
+                "running and accessible from the API."
+            ) from exc
+
+        try:
+            generated_text = data["message"]["content"]
+
+            if not generated_text.strip():
+                raise ProviderError(
+                    "Ollama returned an empty response."
+                )
+
+            return Generation(
+                text=generated_text,
+                model=data.get("model", model),
+                provider="ollama",
+                latency_ms=round(
+                    (perf_counter() - start) * 1000, 2
+                ),
+                input_tokens=data.get("prompt_eval_count"),
+                output_tokens=data.get("eval_count"),
+            )
+
+        except (KeyError, TypeError, AttributeError) as exc:
+            raise ProviderError(
+                "Unexpected Ollama response format."
+            ) from exc
+
+
+
+
 def get_provider(name: str) -> Provider:
     if name == "mock":
         return MockProvider()
     if name == "groq":
         return GroqProvider()
+    if name == "ollama":
+        return OllamaProvider()
+
     raise ValueError(f"Unsupported provider: {name}")
