@@ -125,3 +125,28 @@ def list_runs(limit: int = 20) -> list[dict]:
         return [json.loads(row["data"]) for row in rows]
     finally:
         connection.close()
+
+
+def database_ready() -> bool:
+    """Check database connectivity without changing stored data."""
+    url = database_url()
+
+    try:
+        if url:
+            with psycopg.connect(
+                url,
+                connect_timeout=2,
+            ) as connection:
+                connection.execute("SELECT 1").fetchone()
+        else:
+            connection = sqlite_connection()
+            try:
+                connection.execute("SELECT 1").fetchone()
+            finally:
+                connection.close()
+
+        return True
+
+    except (psycopg.Error, sqlite3.Error, OSError):
+        return False
+

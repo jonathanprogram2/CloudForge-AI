@@ -11,6 +11,8 @@ from pydantic import BaseModel, Field
 from fastapi.middleware.cors import CORSMiddleware
 
 
+from app.history import save_run, list_runs, database_ready
+
 
 from app.observability import (
     monitor_requests,
@@ -65,6 +67,21 @@ class EvaluationResult(BaseModel):
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "healthy", "service": "cloudforge-ai"}
+
+
+@app.get("/ready")
+def readiness() -> dict[str, str]:
+    if not database_ready():
+        raise HTTPException(
+            status_code=503,
+            detail="Database unavailable",
+        )
+
+    return {
+        "status": "ready",
+        "database": "connected",
+    }
+
 
 
 @app.get("/api/v1/info")
