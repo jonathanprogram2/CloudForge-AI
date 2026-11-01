@@ -1,0 +1,11 @@
+run,model,prompt,success,request_latency_ms,inference_latency_ms,input_tokens,output_tokens,error,generation_duration_ns,done_reason
+1,qwen3:1.7b,Explain Docker Compose in three sentences.,True,391.37,389.38,25,56,,339584000,stop
+2,qwen3:1.7b,Explain why PostgreSQL is useful for AI applications.,True,1611.63,1686.91,26,256,,1557819000,length
+3,qwen3:1.7b,Explain what Prometheus monitors.,True,1661.73,1715.91,22,256,,1574632000,length
+4,qwen3:1.7b,Explain how an AI inference API works.,True,1639.99,1694.41,25,256,,1561261000,length
+5,qwen3:1.7b,Explain the difference between latency and throughput.,True,1654.81,1738.94,25,256,,1593978000,length
+6,qwen3:1.7b,Explain Docker Compose in three sentences.,True,413.48,396.45,25,56,,336212000,stop
+7,qwen3:1.7b,Explain why PostgreSQL is useful for AI applications.,True,1635.79,1708.99,26,256,,1579265000,length
+8,qwen3:1.7b,Explain what Prometheus monitors.,True,1605.74,1690.08,22,256,,1569547000,length
+9,qwen3:1.7b,Explain how an AI inference API works.,True,1627.82,1685.16,25,256,,1563516000,length
+10,qwen3:1.7b,Explain the difference between latency and throughput.,True,1631.43,1698.04,25,256,,1572655000,length

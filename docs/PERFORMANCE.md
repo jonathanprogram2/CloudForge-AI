@@ -67,3 +67,15 @@ The script produces JSON and CSV benchmark reports.
 - Repeat benchmarks with larger sample sizes.
 - Separate model generation latency from total API request latency.
 - Compare Qwen3 1.7B against Qwen3 4B.
+
+## Follow-up Benchmark — Native Ollama Timing
+
+A second benchmark was completed using the same Qwen3 1.7B model and ten sequential requests.
+
+The follow-up recorded an average API latency of 1,387.38 ms, p50 latency of 1,629.63 ms, and p95 latency of 1,658.62 ms. All ten requests succeeded.
+
+Using Ollama's native generation-duration measurement, the model achieved an aggregate generation throughput of 163.04 output tokens per second during the measured requests.
+
+Eight of the ten responses stopped at the configured 256-token output limit. This means the benchmark demonstrates performance, but it does not establish that all generated answers were complete.
+
+These measurements reflect a limited local workload and should not be generalized to production-scale inference.
