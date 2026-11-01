@@ -16,7 +16,7 @@ output "ecr_repository_url" {
 }
 
 output "load_balancer_url" {
-  value = "http://${aws_lb.api.dns_name}"
+  value = "https://${aws_lb.api.dns_name}"
 }
 
 output "cloudwatch_log_group" {

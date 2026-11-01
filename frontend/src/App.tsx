@@ -79,7 +79,41 @@ function App() {
   }
 
   useEffect(() => {
-    void refresh();
+    let cancelled = false;
+
+    async function loadInitialData() {
+      try {
+        const [metricsResponse, runsResponse] = await Promise.all([
+          fetch(`${API}/api/v1/metrics`),
+          fetch(`${API}/api/v1/runs?limit=100`),
+        ]);
+
+        if (!metricsResponse.ok || !runsResponse.ok) {
+          throw new Error("API request failed");
+        }
+
+        const metricsData = await metricsResponse.json();
+        const runsData = await runsResponse.json();
+
+        if (!cancelled) {
+          setMetrics(metricsData);
+          setRuns(runsData);
+          setConnected(true);
+          setError("");
+        }
+      } catch {
+        if (!cancelled) {
+          setConnected(false);
+          setError("Cannot reach FastAPI. Check that port 8000 is running.");
+        }
+      }
+    }
+
+    void loadInitialData();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   async function runBenchmark() {

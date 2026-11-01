@@ -33,3 +33,10 @@ variable "task_count" {
     error_message = "Task count must be between 0 and 2."
   }
 }
+
+
+variable "acm_certificate_arn" {
+  description = "ARN of an ACM certificate for HTTPS"
+  type        = string
+}
+
