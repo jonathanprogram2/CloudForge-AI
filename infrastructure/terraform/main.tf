@@ -175,6 +175,13 @@ resource "aws_cloudwatch_log_group" "api" {
 # Application Load Balancer
 # -----------------------------
 
+
+# Architecture decision:
+# This ALB is intentionally public to serve HTTPS traffic.
+# ECS ingress is restricted to the ALB security group.
+# Review this exception again before production deployment.
+# trivy:ignore:AWS-0053
+
 resource "aws_lb" "api" {
   name               = "${local.name}-alb"
   load_balancer_type = "application"
