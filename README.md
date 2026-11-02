@@ -1,203 +1,213 @@
 # CloudForge AI
 
-**Cloud-native AI evaluation and infrastructure engineering portfolio project** built with Python, FastAPI, React, TypeScript, Docker, Terraform, and AWS infrastructure definitions.
+**Local-first AI inference, evaluation, and observability platform** built with FastAPI, React, TypeScript, Ollama, PostgreSQL, Docker Compose, Prometheus, and Grafana.
 
-CloudForge AI provides a local AI operations dashboard for running evaluations, comparing benchmark results, and reviewing historical metrics. The repository also includes an AWS ECS/Fargate deployment architecture defined with Terraform and a GitHub Actions DevSecOps pipeline.
+CloudForge AI is a hands-on AI platform engineering project: run local language models, evaluate responses with transparent keyword checks, compare benchmark cases, persist results, and monitor activity across the API and inference pipeline.
 
-> **Current status:** The application runs locally, including inside Docker. Terraform has been initialized and validated locally; **the AWS infrastructure has not been provisioned or tested on AWS**. Model comparisons using the default `mock` provider are simulations, not evidence of real model quality.
+> **Deployment status:** The complete application stack runs locally using Docker Compose; Ollama runs on the host. Terraform describes a possible AWS ECS/Fargate architecture but **has not been deployed or tested on AWS**. Local metrics are not claims of production-scale performance.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    User[Browser] --> UI[React + TypeScript dashboard]
+    UI --> API[FastAPI REST API]
+    API --> LLM[Provider abstraction]
+    LLM --> Ollama[Ollama / Qwen3 on host]
+    LLM --> Mock[Mock provider]
+    LLM -. optional .-> Groq[Groq API]
+    API --> PG[(PostgreSQL)]
+    Prom[Prometheus] -->|scrapes /metrics| API
+    Graf[Grafana] -->|queries| Prom
+    Actions[GitHub Actions] -. validates .-> API
+    Actions -. validates .-> UI
+    Actions -. scans .-> IaC[Terraform AWS reference]
+```
+
+Docker Compose starts the dashboard, API, PostgreSQL, Prometheus, and Grafana. The containerized API reaches host Ollama through `host.docker.internal`.
 
 ## Features
 
-- **FastAPI backend:** REST endpoints, input validation, health checks, and interactive OpenAPI documentation.
-- **AI evaluations:** Deterministic expected-term coverage scoring for test cases. This is **not** a semantic accuracy or model-quality measure.
-- **Provider abstraction:** Local mock inference with optional Groq API integration for live inference.
-- **Benchmarking:** Compare up to three model identifiers across up to four test cases in a request, with individual results, aggregated scores, latency, token usage (when reported), and error records.
-- **Evaluation history:** SQLite storage for generated evaluation runs and an API for retrieving recent results.
-- **Operations dashboard:** React/TypeScript interface for metrics, benchmark execution, comparisons, and evaluation history.
-- **Containerization:** Dockerized FastAPI backend, runnable locally.
-- **AWS Infrastructure as Code:** Terraform definitions for VPC, two public subnets, security groups, internet gateway, IAM roles, Amazon ECR, Amazon ECS Fargate, Application Load Balancer, and CloudWatch logs.
-- **DevSecOps CI:** GitHub Actions workflows for backend tests, frontend lint/build, Terraform validation, and infrastructure/container security scans. Passing status should be checked in GitHub Actions.
+- **Local LLM inference:** Ollama provider with Qwen3, alongside mock and optional Groq providers.
+- **AI Benchmark Lab:** Run bounded evaluation cases and compare model outputs, response times, and reported token usage.
+- **Transparent evaluation:** Expected-term coverage scoring; **not** a semantic accuracy or model-quality assessment.
+- **Persistent history:** Save and query runs in PostgreSQL, with a SQLite fallback when `DATABASE_URL` is unset.
+- **Readiness and recovery:** `/health` tests process liveness; `/ready` verifies database connectivity. Validated a 503 response during database interruption and recovery to 200 after restart.
+- **Observability:** Prometheus metrics for HTTP requests, AI runs, inference duration, and token counts; Grafana dashboard provisioned from repository files.
+- **Repeatable benchmarks:** Sequential Python workload runner with JSON and CSV exports, end-to-end latency percentiles, Ollama native generation speed, and finish-reason reporting.
+- **DevSecOps:** GitHub Actions for Python tests, React lint/build, real PostgreSQL integration testing, Terraform validation, and Trivy security scans.
 
 ## Technology stack
 
-| Layer           | Technologies                                                       |
-| --------------- | ------------------------------------------------------------------ |
-| Backend         | Python, FastAPI, Pydantic, Pytest                                  |
-| Frontend        | React, TypeScript, Vite, CSS                                       |
-| AI              | Local mock provider, optional Groq API                             |
-| Data            | SQLite (local evaluation history)                                  |
-| Infrastructure  | Docker, Terraform, AWS ECS/Fargate, ECR, VPC, ALB, IAM, CloudWatch |
-| CI and security | GitHub Actions, Trivy                                              |
+| Layer                    | Technologies                                                                  |
+| ------------------------ | ----------------------------------------------------------------------------- |
+| Frontend                 | React, TypeScript, Vite, CSS                                                  |
+| API and testing          | Python, FastAPI, Pydantic, Pytest                                             |
+| Models                   | Ollama (local Qwen3), mock provider; optional Groq                            |
+| Storage                  | PostgreSQL 17; SQLite development fallback                                    |
+| Monitoring               | Prometheus 3, Grafana 12                                                      |
+| Containers               | Docker Compose                                                                |
+| Infrastructure reference | Terraform, AWS ECS Fargate, ECR, ALB, VPC, IAM, CloudWatch (**not deployed**) |
+| CI/security              | GitHub Actions, Trivy                                                         |
 
-## Repository layout
+## Project Screenshots
 
-```text
-.
-├── .github/workflows/       # Continuous integration and security scans
-├── app/                     # FastAPI application and evaluation logic
-├── frontend/                # React and TypeScript dashboard
-├── infrastructure/
-│   └── terraform/           # AWS infrastructure definitions
-├── tests/                   # Python API and benchmark tests
-├── Dockerfile
-├── requirements.txt         # Python application + test dependencies
-└── README.md
-```
+### Operations Dashboard
 
-## Local development
+![CloudForge AI Dashboard](docs/screenshots/dashboard.png)
 
-### Prerequisites
+_The main operations dashboard provides a centralized interface for viewing AI evaluations, performance metrics, and historical model activity._
 
-- Python **3.10+** (the project has been run locally with Python 3.10)
-- Node.js and npm (Node.js 22 is used in the CI configuration)
-- Docker Desktop (optional, for container testing)
-- Terraform (optional, for infrastructure validation)
+### AI Benchmark Lab
 
-### 1. Start the FastAPI backend
+![AI Benchmark Lab](docs/screenshots/benchmark-lab.png)
 
-**Windows PowerShell**, from the repository root:
+_The benchmarking interface allows users to test AI models, compare evaluation scores, measure inference latency, and analyze token usage._
+
+### Grafana Monitoring
+
+![Grafana Model Monitoring](docs/screenshots/grafana.png)
+
+_Real-time observability powered by Prometheus and Grafana, tracking API traffic, inference latency, model execution, and generated tokens._
+
+### GitHub Actions CI/CD
+
+![GitHub Actions](docs/screenshots/github-actions.png)
+
+_An automated DevSecOps pipeline that runs backend tests, PostgreSQL integration tests, frontend builds, Terraform validation, and security scans._
+
+## Quick start — Docker Compose (recommended)
+
+**Prerequisites:** Docker Desktop, Git, and [Ollama](https://ollama.com/) installed on the host. Download the local model once:
 
 ```powershell
-py -3.10 -m venv .venv
+ollama pull qwen3:1.7b
+ollama list
+```
+
+Clone and start the stack:
+
+```powershell
+git clone https://github.com/jonathanprogram2/CloudForge-AI.git
+cd CloudForge-AI
+docker compose up -d --build
+```
+
+Open these local endpoints:
+
+| Service               | URL                          |
+| --------------------- | ---------------------------- |
+| React dashboard       | http://127.0.0.1:5173        |
+| FastAPI documentation | http://127.0.0.1:8000/docs   |
+| API liveness          | http://127.0.0.1:8000/health |
+| Database readiness    | http://127.0.0.1:8000/ready  |
+| Prometheus            | http://127.0.0.1:9090        |
+| Grafana               | http://127.0.0.1:3000        |
+
+**Grafana local-only development credentials:** `admin` / `cloudforge_local_only` (defined in `compose.yaml`; change these before exposing the service). The application and monitoring ports bind to localhost. Ollama must be running on the host for real local inference; mock mode does not require it. Use **`docker compose down`** to stop the stack without deleting persistent volumes; **do not use `down -v`** if you want to retain saved runs and Grafana data.
+
+### Local Python tests
+
+Windows PowerShell, from the repo root:
+
+```powershell
+py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
-python -m uvicorn app.main:app --reload --port 8000
+python -m pytest -q
 ```
 
-If you use another compatible Python version, replace `py -3.10` with that interpreter.
-
-**macOS/Linux:**
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements.txt
-python -m uvicorn app.main:app --reload --port 8000
-```
-
-- API documentation: http://127.0.0.1:8000/docs
-- Health endpoint: http://127.0.0.1:8000/health
-
-### 2. Start the React dashboard
-
-In a second terminal:
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Open http://localhost:5173. Keep the backend running on port `8000` for dashboard API calls.
-
-### 3. Run quality checks
-
-From the repository root:
+The most recently verified local result was **27 tests passed, 1 PostgreSQL integration test skipped** (because the local shell did not define `DATABASE_URL`). GitHub Actions runs the PostgreSQL integration test against a temporary PostgreSQL service. To test the frontend outside Docker:
 
 ```powershell
-python -m pytest -q
 cd frontend
+npm ci
 npm run lint
 npm run build
 ```
 
-The last locally reported backend test result was **13 passing tests**. Frontend and CI checks should be confirmed again after changes.
-
-## API endpoints
-
-| Method | Route                 | Purpose                                             |
-| ------ | --------------------- | --------------------------------------------------- |
-| GET    | `/health`             | Service health                                      |
-| GET    | `/api/v1/info`        | Service information                                 |
-| POST   | `/api/v1/evaluations` | Evaluate a supplied response against expected terms |
-| POST   | `/api/v1/runs`        | Generate, evaluate, and save a run                  |
-| GET    | `/api/v1/runs`        | Retrieve recent run history                         |
-| POST   | `/api/v1/benchmarks`  | Execute bounded comparison benchmarks               |
-| GET    | `/api/v1/metrics`     | Aggregate recent saved-run metrics                  |
-
-Example mock benchmark request to `POST /api/v1/benchmarks`:
-
-```json
-{
-  "provider": "mock",
-  "models": ["model-alpha", "model-beta"],
-  "cases": [
-    {
-      "prompt": "Explain AWS cloud computing",
-      "expected_terms": ["AWS", "cloud"]
-    }
-  ]
-}
-```
-
-The mock provider requires no external API key. The model names above are demonstration labels and do not represent independently queried LLMs. For live inference, the Groq provider requires a valid `GROQ_API_KEY` and a supported model ID. **Never commit API keys or credentials.**
-
-## Run the backend in Docker
-
-From the repository root:
-
-```bash
-docker build -t cloudforge-ai:local .
-docker run --rm -p 8002:8000 cloudforge-ai:local
-```
-
-Open http://127.0.0.1:8002/health to check the container.
-
-**Storage caveat:** SQLite history stored inside an ephemeral container is not durable across container removal. A persistent external data store will be required for production deployment.
-
-## AWS infrastructure (defined, not deployed)
-
-Terraform configuration is located in `infrastructure/terraform/`. It models:
-
-- VPC and internet gateway with public subnets in two Availability Zones
-- Application Load Balancer and inbound security groups
-- ECS Fargate service and task definition
-- ECR repository for the application container image
-- ECS IAM execution and application roles
-- CloudWatch log group
-
-To validate locally:
+### API example
 
 ```powershell
-cd infrastructure/terraform
-terraform fmt -check -recursive
-terraform init -backend=false
-terraform validate
+$body = @{ provider = 'ollama'; model_name = 'qwen3:1.7b'; prompt = 'Explain Docker Compose briefly'; expected_terms = @('Docker') } | ConvertTo-Json
+Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:8000/api/v1/runs' -ContentType 'application/json' -Body $body
 ```
 
-These commands **do not create AWS resources**. Do not run `terraform apply` until the placeholder container image has been replaced, cost exposure has been reviewed, and a deployment plan has been approved.
+The mock provider can be used instead of `ollama` without a model download.
 
-### Deployment and security limitations
+### Key endpoints
 
-The current Terraform configuration is a **learning and portfolio architecture**, not a production-hardened deployment. It uses HTTP on the load balancer and publicly networked Fargate tasks. Production improvements include HTTPS, private networking, persistent storage, secrets management, application authentication, controlled egress, monitoring alarms, and tested recovery procedures. The dashboard currently calls a localhost API rather than a deployed service.
+| Method | Endpoint              | Purpose                                       |
+| ------ | --------------------- | --------------------------------------------- |
+| GET    | `/health`             | Process liveness                              |
+| GET    | `/ready`              | Database readiness                            |
+| GET    | `/metrics`            | Prometheus metrics                            |
+| GET    | `/api/v1/info`        | Service metadata                              |
+| POST   | `/api/v1/evaluations` | Evaluate supplied text against expected terms |
+| POST   | `/api/v1/runs`        | Generate, score, persist and instrument a run |
+| GET    | `/api/v1/runs`        | Recent evaluation history                     |
+| POST   | `/api/v1/benchmarks`  | Bounded model/case comparisons                |
+| GET    | `/api/v1/metrics`     | Saved-run summary                             |
 
-## Continuous integration
+## Measured local performance
 
-The GitHub Actions workflow in `.github/workflows/ci.yml` is configured for:
+An initial Qwen3 1.7B test on an **NVIDIA RTX 4070 Laptop GPU (8 GB VRAM), Intel i7-13700HX, 16 GB RAM** used one warm-up and ten sequential measured requests:
 
-1. Python tests
-2. React linting and production build
-3. Terraform formatting and validation
-4. Infrastructure security scanning
-5. Container vulnerability scanning
+| Follow-up benchmark metric                    |                   Result |
+| --------------------------------------------- | -----------------------: |
+| Successful requests                           |                    10/10 |
+| Mean end-to-end request latency               |              1,387.38 ms |
+| p50 request latency                           |              1,629.63 ms |
+| p95 request latency                           |              1,658.62 ms |
+| Native Ollama generation throughput           | 163.04 output tokens/sec |
+| Replies stopped at configured 256-token limit |                     8/10 |
 
-Check the **Actions** tab for current job results. Security scans may uncover findings that need to be addressed before deployment; configuring a check is not the same as passing it.
+These results show **local performance on a small, single-concurrency workload**; they do not establish production p95 latency, output quality, or answer completeness. The throughput calculation uses the sum of Ollama-reported output tokens divided by the sum of native model generation durations; it is not HTTP throughput.
 
-## Development status and roadmap
+See [benchmark methods and limitations](docs/PERFORMANCE.md), [initial report](docs/performance/benchmark_report.json), and [follow-up report](docs/performance/benchmark_report_v2.json).
 
-| Area                                                         | Status                                          |
-| ------------------------------------------------------------ | ----------------------------------------------- |
-| FastAPI backend and local evaluation                         | Implemented and tested locally                  |
-| Mock provider, optional Groq integration, SQLite run history | Implemented locally; real provider use optional |
-| Benchmark endpoint and metrics                               | Implemented; mock benchmarks verified           |
-| React operations dashboard                                   | Running locally                                 |
-| Docker backend                                               | Built and health-checked locally                |
-| Terraform AWS infrastructure                                 | Defined and locally validated                   |
-| GitHub Actions DevSecOps pipeline                            | Configured; review workflow runs                |
-| AWS deployment, load testing, cost verification              | Not yet completed                               |
+Reproduce the benchmark from your local Python environment while the stack and Ollama are running:
 
-## Cost and credentials
+```powershell
+python scripts/benchmark_performance.py --model qwen3:1.7b --runs 10 --output reports/performance
+```
 
-Local application development, Docker, and Terraform validation require **no AWS resource provisioning**. An actual AWS deployment can incur charges for ECS Fargate, load balancing, public IPv4 addresses, logging, storage, and other services. A `$0` current bill is **not** a guarantee that new resources will be free. Review AWS pricing and budgets before deployment, and tear down resources after testing.
+Generated `reports/` output is ignored by Git; published results under `docs/performance/` are reviewed snapshots.
 
-Do not commit `.env` files, secrets, credentials, SQLite databases, Terraform state files, or generated build directories.
+## Repository guide
+
+```text
+app/                           FastAPI, AI providers, history, observability
+frontend/                      React + TypeScript dashboard
+monitoring/prometheus/         Scrape configuration
+monitoring/grafana/            Provisioned datasource and dashboard
+scripts/benchmark_performance.py  Local benchmark runner
+reports/                       Generated, ignored benchmark reports
+docs/PERFORMANCE.md            Benchmark methodology, limitations, measurements
+docs/performance/              Reviewed benchmark data snapshots
+tests/                         Unit, API, reliability, integration tests
+.github/workflows/ci.yml       CI pipeline
+infrastructure/terraform/      Unprovisioned AWS reference architecture
+compose.yaml                   Local stack
+Dockerfile                     Backend image
+```
+
+## Security and deployment limitations
+
+- **AWS is not deployed.** Terraform provides an infrastructure design reference, not a production environment.
+- An existing Trivy infrastructure scan reported a **public ALB** and **unrestricted ECS outbound egress**. The ALB's public exposure may be intentional for a future HTTPS API, but the network design needs review and remediation before any cloud deployment. Do not assume that all GitHub Actions checks pass.
+- Grafana uses local development credentials; the current application is intended for trusted local use, not public hosting.
+- No user authentication, public production deployment, or production load testing is claimed.
+- The expected-term score only measures keyword coverage. Reaching a token limit can truncate valid model answers.
+- Never commit secrets, credentials, `.env` files, Terraform state, or database volumes.
+
+## Roadmap
+
+- Harden Terraform networking and resolve security findings before any AWS deployment.
+- Expand benchmarking with larger sample sizes, native token generation metrics, and controlled model comparisons.
+- Add authentication and production secret handling before exposing the API publicly.
+- Build deployment and recovery playbooks for a real production environment.
+
+## Project scope
+
+Built as an independently developed engineering portfolio project to demonstrate full-stack AI systems, local inference, storage, observability, performance measurement, and CI security practices.
