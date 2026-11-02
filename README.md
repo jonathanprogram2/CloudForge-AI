@@ -76,6 +76,8 @@ _Real-time observability powered by Prometheus and Grafana, tracking API traffic
 
 _An automated DevSecOps pipeline that runs backend tests, PostgreSQL integration tests, frontend builds, Terraform validation, and security scans._
 
+> **Note:** The CI/CD pipeline currently has one failing security check related to the AWS Terraform infrastructure. Trivy flagged a publicly accessible load balancer and unrestricted outbound traffic. The AWS infrastructure is included as a reference architecture and has not been deployed. All other pipeline checks, including backend tests, PostgreSQL integration tests, frontend builds, Terraform validation, and Docker image security scanning, passed.
+
 ## Quick start — Docker Compose (recommended)
 
 **Prerequisites:** Docker Desktop, Git, and [Ollama](https://ollama.com/) installed on the host. Download the local model once:
